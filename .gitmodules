@@ -7,3 +7,6 @@
 [submodule "xll24"]
 	path = xll24
 	url = https://github.com/xlladdins/xll24
+[submodule "fms_dual"]
+	path = fms_dual
+	url = https://github.com/keithalewis/fms_dual
