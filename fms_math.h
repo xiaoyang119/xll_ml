@@ -3,6 +3,21 @@
 
 namespace fms::math {
 
+	template<class X = double>
+	constexpr X epsilon = std::numeric_limits<X>::epsilon();
+
+	template<class X = double>
+	constexpr X infinity = std::numeric_limits<X>::infinity();
+
+	template<class X = double>
+	constexpr X NaN = std::numeric_limits<X>::quiet_NaN();
+	static_assert(NaN<double> != NaN<double>);
+
+	template<class X = double>
+	constexpr bool isnan(X x) {
+		return x != x;
+	}
+
 	template<class X>
 	constexpr X abs(X x) {
 		return x < 0 ? -x : x;
@@ -10,7 +25,17 @@ namespace fms::math {
 	static_assert(abs(1) == 1);
 	static_assert(abs(0) == 0);
 	static_assert(abs(-1) == 1);
-	
+
+	template<class X>
+	constexpr X pow(X x, int n)
+	{
+		return n == 0 ? 1 : n > 0 ? x * pow(x, n - 1) : 1 / pow(x, -n);
+	}
+	template<class X>
+	constexpr X sqrt_epslion(X x) {
+		return epsilon<X> * pow(10, std::numeric_limits<X>::num;
+	}	
+
 	template<class X>
 	constexpr X exp_approx(X x, int terms = 20) {
 		X sum = 1.0;
