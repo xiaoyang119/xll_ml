@@ -67,7 +67,8 @@ namespace fms::option {
 		template<class F = double, class S = double, class K = double>
 		auto call(F f, S s, K k, const model<F, S>& m)
 		{
-			return 0; 
+			auto p = put(f, s, k, m);
+			return p + f - k;
 		}
 
 		// In the Black-Scholes/Merton model
@@ -96,6 +97,19 @@ namespace fms::option {
 
 			// TODO: implement bsm::put and bsm::call.
 			// Hint: use bsm_to_black to get f and s and then call black::put and black::call.
+
+			template<class F = double, class S = double, class K = double>
+			inline auto put(double s0, double r, double sigma, double k, double t, const model<F, S>& m) {
+				auto [f, s] = bsm_to_black(s0, r, sigma, t);
+				// Note: Standard BSM prices are discounted: exp(-r*t) * black_price
+				return std::exp(-r * t) * black::put(f, s, k, m);
+			}
+
+			template<class F = double, class S = double, class K = double>
+			inline auto call(double s0, double r, double sigma, double k, double t, const model<F, S>& m) {
+				auto [f, s] = bsm_to_black(s0, r, sigma, t);
+				return std::exp(-r * t) * black::call(f, s, k, m);
+			}
 		}
 	}
 
