@@ -8,8 +8,8 @@
 namespace fms::option {
 
 	template<class X = double, class S = double>
-	struct normal : model<X, S> {
-		using model<X, S>::T;
+	struct normal : base<X, S> {
+		using base<X, S>::T;
 
 	private:
 		// Standard normal cumulative distribution function

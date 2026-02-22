@@ -5,7 +5,7 @@
 
 namespace fms::option::discrete {
 	template<class X = double, class S = double>
-	class model : option::model<X, S> {
+	class model : option::base<X, S> {
 		std::valarray<X> xi, pi; // x_i, p_i >= 0, sum p_i = 1
 	
 		void normalize()
@@ -16,7 +16,7 @@ namespace fms::option::discrete {
 			xi /= std::sqrt((xi * xi * pi).sum()); // variance 1
 		}
 	public:
-		using option::model<X, S>::T;
+		using option::base<X, S>::T;
 	
 		// E[1(X <= x) exp(s X - kappa(s))] 
 		//   = sum_{x_i <= x} p_i exp(s x_i - kappa(s))

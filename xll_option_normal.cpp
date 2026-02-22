@@ -22,7 +22,7 @@ HANDLEX WINAPI xll_option_normal()
 	HANDLEX result = INVALID_HANDLEX;
 	
 	try {
-		static handle<model<>> m_(new normal<>{});
+		static handle<base<>> m_(new normal<>{});
 		ensure(m_);
 		result = m_.get();
 	}

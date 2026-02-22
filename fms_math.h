@@ -1,7 +1,23 @@
 // fms_math.h - Some constexpr math functions
 #pragma once
+#include <limits>
 
 namespace fms::math {
+
+	template<class X = double>
+	constexpr X epsilon = std::numeric_limits<X>::epsilon();
+
+	template<class X = double>
+	constexpr X infinity = std::numeric_limits<X>::infinity();
+
+	template<class X = double>
+	constexpr X NaN = std::numeric_limits<X>::quiet_NaN();
+	static_assert(NaN<double> != NaN<double>);
+
+	template<class X = double>
+	constexpr bool isnan(X x) {
+		return x != x;
+	}
 
 	template<class X>
 	constexpr X abs(X x) {
@@ -10,15 +26,43 @@ namespace fms::math {
 	static_assert(abs(1) == 1);
 	static_assert(abs(0) == 0);
 	static_assert(abs(-1) == 1);
-	
+
 	template<class X>
-	constexpr X exp_approx(X x, int terms = 20) {
+	constexpr X pow(X x, int n)
+	{
+		return n == 0 ? 1 : n > 0 ? x * pow(x, n - 1) : 1 / pow(x, -n);
+	}
+
+	template<class X>
+	constexpr bool samesign(X x, X y)
+	{
+		return (x > 0 && y > 0) || (x < 0 && y < 0);
+	}
+
+	// Constexpr square root using Newton-Raphson method
+	template<class X>
+	constexpr X sqrt(X x, X guess, int iterations = 10) 
+	{
+		return iterations == 0 ? guess : sqrt(x, (guess + x / guess) / 2, iterations - 1);
+	}
+
+	template<class X>
+	constexpr X sqrt(X x) 
+	{
+		return x == 0 ? 0 : sqrt(x, x / 2, 20);
+	}
+
+	template<class X>
+	constexpr X sqrt_epsilon = sqrt(epsilon<X>);	
+
+	template<class X>
+	constexpr X exp_approx(X x, int terms = 20) 
+	{
 		X sum = 1.0;
 		X term = 1.0;
 		for (int n = 1; n < terms; ++n) {
 			term *= x / n;
 			sum += term;
-			if (abs(term) < 1e-15) break;
 		}
 		return sum;
 	}
@@ -26,7 +70,8 @@ namespace fms::math {
 	// Abramowitz& Stegun approximation
 	// Maximum error: ~1.5e-7
 	template<class X>
-	constexpr X erf_as(X x) {
+	constexpr X erf_as(X x) 
+	{
 		if (x == 0) return 0;
 
 		constexpr X a1 = 0.254829592;
@@ -38,7 +83,7 @@ namespace fms::math {
 
 		// Save the sign of x
 		int sign = (x < 0) ? -1 : 1;
-		x = abs(x);
+		x = fms::math::abs(x);
 
 		// A&S formula 7.1.26
 		X t = 1.0 / (1.0 + p * x);

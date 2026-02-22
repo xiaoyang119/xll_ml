@@ -20,8 +20,9 @@ namespace fms::option {
 
 	// Interface for option pricing models. 
 	template<class F = double, class S = double>
-	struct model {
+	struct base {
 		using T = std::common_type_t<F, S>;
+		virtual ~base() {}
 
 		// Cumulative share distribution function
 		// P_s(X < x) = E[1(X < x) exp(s X - kappa(s))]
@@ -44,9 +45,9 @@ namespace fms::option {
 
 		// F < k iff X < (log(k/f) + kappa(s))/s
 		template<class F = double, class S = double, class K = double>
-		auto moneyness(F f, S s, K k, const model<F, S>& m)
+		auto moneyness(F f, S s, K k, const base<F, S>& m)
 		{
-			using T = model<F, S>::T;
+			using T = base<F, S>::T;
 			if (f <= 0 or s <= 0 or k <= 0) {
 				return NaN<T>;
 			}
@@ -55,17 +56,16 @@ namespace fms::option {
 		}
 
 		template<class F = double, class S = double, class K = double>
-		auto put(F f, S s, K k, const model<F, S>& m)
+		auto put(F f, S s, K k, const base<F, S>& m)
 		{
 			auto x = moneyness(f, s, k, m);
 
 			return k * m.cdf(x, 0) - f * m.cdf(x, s);
 		}
 		
-		// implement using put-call parity: call = put + f - k
 		// (F - k)^+ - (k - F)^+ = F - k
 		template<class F = double, class S = double, class K = double>
-		auto call(F f, S s, K k, const model<F, S>& m)
+		auto call(F f, S s, K k, const base<F, S>& m)
 		{
 			return put(f, s, k, m) + f - k;
 		}
@@ -87,27 +87,24 @@ namespace fms::option {
 
 			template<class F = double, class S = double>
 			inline auto moneyness(double r, double s0, double sigma, double k, double t,
-				const model<F,S>& m)
+				const base<F,S>& m)
 			{
 				auto [f, s] = bsm_to_black(s0, r, sigma, t);
 				
 				return black::moneyness(f, s, k, m);
 			}
 
-			// implement bsm::put and bsm::call.
-			// Hint: use bsm_to_black to get f and s and then call black::put and black::call.
 			template<class F = double, class S = double, class K = double>
-			inline auto put(double r, double s0, double sigma, K k, double t, const model<F, S>& m)
-			{
-				auto [f, s] = bsm_to_black<F, S>(r, s0, sigma, t);
-				return black::put(f, s, k, m);
+			inline auto put(double s0, double r, double sigma, double k, double t, const base<F, S>& m) {
+				auto [f, s] = bsm_to_black(s0, r, sigma, t);
+				// Note: Standard BSM prices are discounted: exp(-r*t) * black_price
+				return std::exp(-r * t) * black::put(f, s, k, m);
 			}
 
 			template<class F = double, class S = double, class K = double>
-			inline auto call(double r, double s0, double sigma, K k, double t, const model<F, S>& m)
-			{
-				auto [f, s] = bsm_to_black<F, S>(r, s0, sigma, t);
-				return black::call(f, s, k, m);
+			inline auto call(double s0, double r, double sigma, double k, double t, const base<F, S>& m) {
+				auto [f, s] = bsm_to_black(s0, r, sigma, t);
+				return std::exp(-r * t) * black::call(f, s, k, m);
 			}
 		}
 	}

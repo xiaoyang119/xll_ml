@@ -57,10 +57,10 @@ namespace fms {
 
 		// near: <near>
 		// here: ---^
-		error& at(std::string_view near, int here = 0)
+		error& at(std::string_view _near, int here = 0)
 		{
-			if (!near.empty()) {
-				message.append("\nnear: ").append(near);
+			if (!_near.empty()) {
+				message.append("\nnear: ").append(_near);
 				if (here > 0) {
 					message.append("\nhere: ").append(here, '-').append("^");
 				}
