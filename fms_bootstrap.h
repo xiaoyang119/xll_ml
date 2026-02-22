@@ -34,7 +34,7 @@ namespace fms::curve {
 			_f = 0.01;
 		}
 
-		const auto vp = [i, &f, _t, p](F f_) { return value::present(i, extrapolate(f, _t, f_)) - p; };
+		const auto vp = [&i, &f, _t, p](F f_) { return value::present(i, extrapolate(f, _t, f_)) - p; };
 
 		auto [f_, tol, n] = root1d::secant(_f, _f + 0.01).solve(vp);
 		_f = f_;
