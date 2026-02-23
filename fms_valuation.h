@@ -62,7 +62,13 @@ namespace fms::value {
 	constexpr auto convexity(const instrument::base<U, C>& i, const curve::base<T, F>& f)
 	{
 		// TODO: Use for loop like in the present value function.
-		return 0; // return sum(apply([&f](const auto& uc) { return uc.u * uc.u * present(uc, f); }, i));
+		C conv = 0;
+		const U* u = i.time();
+		const C* c = i.cash();
+		for (size_t j = 0; j < i.size(); ++j) {
+			conv += static_cast<C>(u[j]) * static_cast<C>(u[j]) * c[j] * static_cast<C>(f.discount(u[j]));
+		}
+		return conv; // return sum(apply([&f](const auto& uc) { return uc.u * uc.u * present(uc, f); }, i));
 	}
 
 	// Price of the instrument at constant yield y.
