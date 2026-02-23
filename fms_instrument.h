@@ -11,7 +11,12 @@ namespace fms::instrument {
 	class base {
 	public:
 		// TODO: Add rule of 5
-
+		base() = default;
+		virtual ~base() = default;           
+		base(const base&) = default;           
+		base& operator=(const base&) = default;     
+		base(base&&) = default;                 
+		base& operator=(base&&) = default;                  
 		// Number of cash flows.
 		constexpr std::size_t size() const noexcept
 		{

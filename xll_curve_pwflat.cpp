@@ -70,3 +70,93 @@ _FP12* WINAPI xll_curve_pwflat(HANDLEX h)
 
 // TODO: Implement CURVE.FORWARD, CURVE.DISCOUNT, CURVE.SPOT
 // use `handle<curve::base<>> h_(h)
+
+// ── CURVE.FORWARD ──────────────────────────────────────────────────
+
+static AddIn xai_curve_forward(
+    Function(XLL_FP, L"xll_curve_forward", CATEGORY L".CURVE.FORWARD")
+    .Arguments({
+        Arg(XLL_HANDLEX, L"h", L"is a handle to a curve."),
+        Arg(XLL_FP,      L"u", L"is an array of times."),
+        })
+        .Category(CATEGORY)
+    .FunctionHelp(L"Return the forward rate f(u) for each time u.")
+);
+_FP12* WINAPI xll_curve_forward(HANDLEX h, _FP12* pu)
+{
+#pragma XLLEXPORT
+    try {
+        handle<curve::base<>> h_(h);
+        ensure(h_);
+
+        for (int i = 0; i < size(*pu); ++i) {
+            pu->array[i] = h_->forward(pu->array[i]);
+        }
+    }
+    catch (const std::exception& ex) {
+        XLL_ERROR(ex.what());
+        return nullptr;
+    }
+
+    return pu;
+}
+
+// ── CURVE.DISCOUNT ─────────────────────────────────────────────────
+
+static AddIn xai_curve_discount(
+    Function(XLL_FP, L"xll_curve_discount", CATEGORY L".CURVE.DISCOUNT")
+    .Arguments({
+        Arg(XLL_HANDLEX, L"h", L"is a handle to a curve."),
+        Arg(XLL_FP,      L"u", L"is an array of times."),
+        })
+        .Category(CATEGORY)
+    .FunctionHelp(L"Return the discount factor D(u) = exp(-integral_0^u f) for each time u.")
+);
+_FP12* WINAPI xll_curve_discount(HANDLEX h, _FP12* pu)
+{
+#pragma XLLEXPORT
+    try {
+        handle<curve::base<>> h_(h);
+        ensure(h_);
+
+        for (int i = 0; i < size(*pu); ++i) {
+            pu->array[i] = h_->discount(pu->array[i]);
+        }
+    }
+    catch (const std::exception& ex) {
+        XLL_ERROR(ex.what());
+        return nullptr;
+    }
+
+    return pu;
+}
+
+// ── CURVE.SPOT ─────────────────────────────────────────────────────
+
+static AddIn xai_curve_spot(
+    Function(XLL_FP, L"xll_curve_spot", CATEGORY L".CURVE.SPOT")
+    .Arguments({
+        Arg(XLL_HANDLEX, L"h", L"is a handle to a curve."),
+        Arg(XLL_FP,      L"u", L"is an array of times."),
+        })
+        .Category(CATEGORY)
+    .FunctionHelp(L"Return the spot rate r(u) = (1/u) integral_0^u f for each time u.")
+);
+_FP12* WINAPI xll_curve_spot(HANDLEX h, _FP12* pu)
+{
+#pragma XLLEXPORT
+    try {
+        handle<curve::base<>> h_(h);
+        ensure(h_);
+
+        for (int i = 0; i < size(*pu); ++i) {
+            pu->array[i] = h_->spot(pu->array[i]);
+        }
+    }
+    catch (const std::exception& ex) {
+        XLL_ERROR(ex.what());
+        return nullptr;
+    }
+
+    return pu;
+}
