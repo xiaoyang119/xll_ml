@@ -116,6 +116,9 @@ HANDLEX WINAPI xll_bond(double u, double c, UINT f)
 #pragma XLLEXPORT
 	HANDLEX h = INVALID_HANDLEX;
 	try {
+		if (f == 0) {
+			f = 2; // semiannual
+		}
 		handle<instrument::base<>> h_(new instrument::bond(u, c, static_cast<instrument::frequency>(f)));
 		ensure(h_);
 		h = h_.get();
