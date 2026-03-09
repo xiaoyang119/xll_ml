@@ -1,63 +1,57 @@
-// xll_bootstrap.cpp - bootstrap functions
-// TODO: Implement \FI.CURVE.PWFLAT.BOOTSTRAP(instruments, prices) 
-#include "xll_fi.h"
+﻿// xll_bootstrap.cpp - bootstrap functions
+#include <vector>
 #include "fms_bootstrap.h"
-#include "fms_instrument.h"
-#include "fms_curve_pwflat.h"
-
+#include "xll_fi.h"
+ 
 using namespace fms;
 using namespace xll;
 
-/* TODO: Hints
-handle<curve::pwflat> WINAPI xll_fi_curve_bootstrap(_FP12* pi, _FP12* pp) { ...
-	ensure(size(*pi) == size(*pp));
-	<something> = curve::bootstrap(std::span<handle<instrument::base<>>(pi->array, n), span(*pp));
-}
-*/
+Auto<OpenAfter> xoa_bootstrap_test([](){ curve::bootstrap_test(); return 1; });
 
-static AddIn xai_fi_curve_bootstrap(
-    Function(XLL_HANDLEX, L"xll_fi_curve_bootstrap", L"\\" CATEGORY L".CURVE.PWFLAT.BOOTSTRAP")
-    .Arguments({
-        Arg(XLL_FP, L"instruments", L"is a 1-D array of instrument handles."),
-        Arg(XLL_FP, L"prices",      L"is a 1-D array of market prices."),
-        })
-        .Uncalced()
-    .Category(CATEGORY)
-    .FunctionHelp(L"Bootstrap a piecewise-flat forward curve from instruments and prices.")
+AddIn xai_curve_pwflat_bootstrap_(
+	Function(XLL_HANDLEX, L"xll_curve_pwflat_bootstrap_", L"\\" CATEGORY L".CURVE.PWFLAT.BOOTSTRAP.")
+	.Arguments({
+		Arg(XLL_FP, L"i", L"is an array of instrument handles."),
+		Arg(XLL_FP, L"p", L"is an array of prices."),
+		})
+		.Uncalced()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return a handle to a pwflat bootstrapped curve.")
 );
-HANDLEX WINAPI xll_fi_curve_bootstrap(_FP12* pi, _FP12* pp)
+HANDLEX WINAPI xll_curve_pwflat_bootstrap_(_FP12* pi, _FP12* pp)
 {
 #pragma XLLEXPORT
-    HANDLEX h = INVALID_HANDLEX;
+	HANDLEX h = INVALID_HANDLEX;
 
-    try {
-        ensure(size(*pi) == size(*pp));
-        int n = size(*pi);
+	try {
+		// Validate array sizes
+		ensure(size(*pi) > 0 || !"bootstrap: instrument array cannot be empty");
+		ensure(size(*pp) > 0 || !"bootstrap: price array cannot be empty");
+		ensure(size(*pi) == size(*pp) || !"bootstrap: instrument and price arrays must have same size");
 
-        auto* f = new curve::pwflat<>();
-        double _t = 0, _f = 0.03;
+		int n = size(*pi);
 
-        for (int i = 0; i < n; ++i) {
-            handle<instrument::base<>> instr(
-                static_cast<HANDLEX>(pi->array[i])
-            );
-            ensure(instr);
+		std::vector<instrument::instrument<>*> is(n);
+		
+		for (int i = 0; i < n; ++i) {
+			// Pointers to instruments from the HANDELX in pi.
+			handle<instrument::base<>> inst(pi->array[i]);
+			ensure(inst || !__FUNCTION__ ": invalid instrument handle");
+			is[i] = inst.as<instrument::instrument<>>();  // Get raw pointer from handle
+		}
+		// Bootstrap using the corrected function signature
+		auto f = curve::bootstrap(std::span(is.data(), is.size()), span(*pp));
+		// Create handle to the bootstrapped curve
+		handle<curve::base<>> h_(new curve::pwflat(std::move(f)));
+		ensure(h_);
+		h = h_.get();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	catch (...) {
+		XLL_ERROR(__FUNCTION__ ": unknown exception");
+	}
 
-            auto [t, fwd] = curve::bootstrap0(*instr, *f, _t, _f, pp->array[i]);
-            ensure(!std::isnan(t) && !std::isnan(fwd));
-
-            f->push_back(t, fwd);
-            _t = t;
-            _f = fwd; 
-        }
-
-        handle<curve::base<>> h_(f);
-        ensure(h_);
-        h = h_.get();
-    }
-    catch (const std::exception& ex) {
-        XLL_ERROR(ex.what());
-    }
-
-    return h;
+	return h;
 }

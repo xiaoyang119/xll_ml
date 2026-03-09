@@ -1,6 +1,6 @@
 // xll_instrument.cpp - times and cash flows of an instrument
-#include "xll_fi.h"
 #include "fms_instrument.h"
+#include "xll_fi.h"
 
 using namespace xll;
 using namespace fms;
@@ -105,7 +105,7 @@ AddIn xai_bond(
 	.Arguments({
 		Arg(XLL_DOUBLE, L"u", L"is the maturity in years."),
 		Arg(XLL_DOUBLE, L"c", L"is the coupon."),
-		Arg(XLL_UINT, L"f", L"is the frequency of coupon payments per year."),
+		Arg(XLL_UINT, L"f", L"is the frequency of coupon payments per year. Default semiannual."),
 		})
 	.Uncalced()
 	.Category(CATEGORY)
@@ -117,7 +117,7 @@ HANDLEX WINAPI xll_bond(double u, double c, UINT f)
 	HANDLEX h = INVALID_HANDLEX;
 	try {
 		if (f == 0) {
-			f = 2; // semiannual
+			f = static_cast<UINT>(instrument::frequency::semiannual);
 		}
 		handle<instrument::base<>> h_(new instrument::bond(u, c, static_cast<instrument::frequency>(f)));
 		ensure(h_);

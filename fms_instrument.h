@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <span>
 #include <vector>
+#include "fms_error.h"
 
 namespace fms::instrument {
 
@@ -10,13 +11,8 @@ namespace fms::instrument {
 	template<class U = double, class C = double>
 	class base {
 	public:
-		// TODO: Add rule of 5
-		base() = default;
-		virtual ~base() = default;           
-		base(const base&) = default;           
-		base& operator=(const base&) = default;     
-		base(base&&) = default;                 
-		base& operator=(base&&) = default;                  
+		virtual ~base() = default;
+
 		// Number of cash flows.
 		constexpr std::size_t size() const noexcept
 		{
@@ -58,6 +54,7 @@ namespace fms::instrument {
 	template<class U = double, class C = double>
 	class instrument: public base<U, C>
 	{
+	protected: // accessible from subclass
 		std::vector<U> u;
 		std::vector<C> c;
 	public:
@@ -95,11 +92,11 @@ namespace fms::instrument {
 	class zero_coupon_bond : public instrument<U, C>
 	{
 	public:
-		zero_coupon_bond(U u, C c = C(1))
+		constexpr zero_coupon_bond(U u, C c = C(1))
 			: instrument<U, C>(std::span(&u, 1), std::span(&c, 1))
 		{ }
-		zero_coupon_bond(const zero_coupon_bond& z) = default;
-		zero_coupon_bond& operator=(const zero_coupon_bond& z) = default;
+		constexpr zero_coupon_bond(const zero_coupon_bond& z) = default;
+		constexpr zero_coupon_bond& operator=(const zero_coupon_bond& z) = default;
 		virtual ~zero_coupon_bond() = default;
 	};
 
@@ -109,29 +106,20 @@ namespace fms::instrument {
 		quarterly = 4, 
 		monthly = 12 
 	};
+	// Number of periods 0 < u1 < ... < un = u, with du = 1/f
 	template<class U = double>
-	inline std::vector<U> periods(U u, frequency f)
+	constexpr std::size_t periods(U u, frequency f)
 	{
-		std::vector<U> t{ u };
+		std::size_t n = 1;
 		
 		// Work backwards from maturity.
 		while ((u -= U(1) / U(f)) > 0) {
-			t.insert(t.begin(), u);
+			++n;
 		}
 	
-		return t;
+		return n;
 	}
-	template<class U = double, class C = double>
-	inline std::vector<U> payments(U u, C c, frequency f = frequency::seminanual)
-	{
-		std::size_t n = static_cast<std::size_t>(u * U(f));
-		std::vector<C> p(n, c / U(f)); // n coupon payments of c/f
-		
-		p.back() += C(1); // Add principal to final payment.
-
-		return p;
-	}
-	// Simple bond paying c at frequency f and 1 + c at maturity u.
+	// Simple bond paying c/f at frequency f and 1 + c/f at maturity u.
 	template<class U = double, class C = double>
 	class bond : public instrument<U, C>
 	{
@@ -139,9 +127,20 @@ namespace fms::instrument {
 		C c; // coupon
 		frequency f;
 	public:
-		bond(U u, C c, frequency f = frequency::semiannual)
-			: instrument<U, C>(periods(u, f), payments(u, c, f)), u(u), c(c), f(f)
-		{ }
+		constexpr bond(U u, C c, frequency f = frequency::semiannual)
+			: instrument<U, C>(std::vector<U>(periods(u,f)), std::vector<C>(periods(u,f))), u(u), c(c), f(f)
+		{
+			std::size_t n = instrument<U, C>::size();
+			U u_ = u;
+			for (std::size_t i = n; i > 0; ) {
+				--i;
+				instrument<U, C>::u[i] = u;
+				u -= U(1) / U(f);
+				instrument<U, C>::c[i] = c / U(f);
+			}
+			// notional
+			instrument<U, C>::c[n - 1] += C(1);
+		}
 		bond(const bond& b) = default;
 		bond& operator=(const bond& b) = default;
 		virtual	~bond() = default;

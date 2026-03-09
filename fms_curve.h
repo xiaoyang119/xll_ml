@@ -102,8 +102,6 @@ namespace fms::curve {
 		{
 			constexpr curve::constant c(1.);
 			static_assert(math::isnan(constant(1.).forward(-1)));
-			// TODO: replace assert by static_assert.
-			static_assert(math::isnan(constant(1.).forward(-1)));
 			static_assert(c.forward(0.) == 1);
 			static_assert(c.integral(0.) == 0);
 			static_assert(c.integral(2.) == 2.);
@@ -144,7 +142,6 @@ namespace fms::curve {
 	inline int bump_test()
 	{
 		{
-			// TODO: use static_assert.
 			constexpr bump b(0.5, 1., 2.);
 			static_assert(b.forward(0.9) == 0);
 			static_assert(b.forward(1) == 0.5);

@@ -52,7 +52,7 @@ namespace fms::math {
 		return x == 0 ? 0 : sqrt(x, x / 2, 20);
 	}
 
-	template<class X>
+	template<class X = double>
 	constexpr X sqrt_epsilon = sqrt(epsilon<X>);	
 
 	template<class X>

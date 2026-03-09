@@ -62,13 +62,11 @@ namespace fms::curve {
 		{
 			return t_.size();
 		}
-		// TODO: change time return pointer constant T*
-		const T* time() const
+		const auto time() const
 		{
 			return t_.data(); // fms::iterable::make_interval(t_);
 		}
-		// TODO: change rate return pointer constant F*
-		const F* rate() const
+		const auto rate() const
 		{
 			return f_.data(); // fms::iterable::make_interval(f_);
 		}

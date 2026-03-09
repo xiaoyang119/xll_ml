@@ -15,7 +15,8 @@ namespace fms::option {
 		// Standard normal cumulative distribution function
 		static X cdf(X x)
 		{
-			return 0.5 * (1 + math::erf_as(x / std::numbers::sqrt2));
+			//return 0.5 * (1 + math::erf_as(x / std::numbers::sqrt2));
+			return 0.5 * (1 + std::erf(x / std::numbers::sqrt2));
 		}
 	public:
 		// cumulative distribution function

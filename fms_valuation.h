@@ -1,7 +1,6 @@
 // fms_valuation.h - present value, duration, convexity, yield, oas
 #pragma once
 #include <cmath>
-// TODO: fix up for fms namespace
 #include "fms_curve.h"
 #include "fms_instrument.h"
 #include "fms_root1d.h"
@@ -22,14 +21,14 @@ namespace fms::value {
 
 	// Present value at t of a zero coupon bond with cash flow c at time u.
 	template<class U, class C, class T, class F>
-	constexpr C present(const instrument::base<U,C>& uc, const curve::base<T, F>& f)
+	constexpr C present(const instrument::base<U,C>& i, const curve::base<T, F>& f)
 	{
 		C pv = 0;
 
-		const U* u = uc.time();
-		const C* c = uc.cash();
-		for (size_t i = 0; i < uc.size(); ++i) {
-			pv += c[i] * f.discount(u[i]);
+		const U* u = i.time();
+		const C* c = i.cash();
+		for (size_t j = 0; j < i.size(); ++j) {
+			pv += c[j] * f.discount(u[j]);
 		}
 
 		return pv;
@@ -44,10 +43,10 @@ namespace fms::value {
 		const U* u = i.time();
 		const C* c = i.cash();
 		for (size_t j = 0; j < i.size(); ++j) {
-			dur += -static_cast<C>(u[j]) * c[j] * static_cast<C>(f.discount(u[j]));
+			dur += -u[j] * c[j] * f.discount(u[j]);
 		}
 
-		return dur; // return sum(apply([&f](const auto& uc) { return -(uc.u) * present(uc, f); }, i));
+		return dur;
 	}
 
 	// Duration divided by present value.
@@ -61,14 +60,15 @@ namespace fms::value {
 	template<class U, class C, class T, class F>
 	constexpr auto convexity(const instrument::base<U, C>& i, const curve::base<T, F>& f)
 	{
-		// TODO: Use for loop like in the present value function.
-		C conv = 0;
+		C cnv = 0;
+
 		const U* u = i.time();
 		const C* c = i.cash();
 		for (size_t j = 0; j < i.size(); ++j) {
-			conv += static_cast<C>(u[j]) * static_cast<C>(u[j]) * c[j] * static_cast<C>(f.discount(u[j]));
+			cnv += u[j] * u[j] * c[j] * f.discount(u[j]);
 		}
-		return conv; // return sum(apply([&f](const auto& uc) { return uc.u * uc.u * present(uc, f); }, i));
+
+		return cnv;
 	}
 
 	// Price of the instrument at constant yield y.

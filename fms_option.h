@@ -62,7 +62,16 @@ namespace fms::option {
 
 			return k * m.cdf(x, 0) - f * m.cdf(x, s);
 		}
-		
+
+		// d/df E[(k - F)^+] = E[-exp(s X - kappa(s)) 1(F <= k)]
+		template<class F = double, class S = double, class K = double>
+		auto put_delta(F f, S s, K k, const base<F, S>& m)
+		{
+			auto x = moneyness(f, s, k, m);
+
+			return -m.cdf(x, s);
+		}
+
 		// (F - k)^+ - (k - F)^+ = F - k
 		template<class F = double, class S = double, class K = double>
 		auto call(F f, S s, K k, const base<F, S>& m)

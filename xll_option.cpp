@@ -1,5 +1,7 @@
 // xll_option.cpp - Generalized option model
 #include "fms_option.h"
+#include "fms_option_normal.h"
+#include "fms_option_discrete.h"
 #include "xll_ml.h"
 
 #undef CATEGORY
@@ -7,6 +9,19 @@
 
 using namespace xll;
 using namespace fms::option;
+
+static auto N = normal<>();
+// Return pointer to model or normal if m = 0.
+// If m is null, return pointer to default normal model.l_(HANDLEX m)
+base<>* model(HANDLEX m)
+{	
+	if (!m) {
+		return &N;
+	}
+	handle<base<>> m_(m);
+	ensure(m_);
+	return m_.ptr();
+}
 
 AddIn xai_option_cdf(
 	Function(XLL_DOUBLE, L"xll_option_cdf", CATEGORY L".CDF")
@@ -24,9 +39,7 @@ double WINAPI xll_option_cdf(double x, double s, HANDLEX m)
 	double result = NaN<double>;
 	
 	try {
-		handle<base<>> m_(m);
-		ensure(m_);
-		result = m_->cdf(x, s);
+		result = model(m)->cdf(x, s);
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
@@ -34,7 +47,6 @@ double WINAPI xll_option_cdf(double x, double s, HANDLEX m)
 	catch (...) {
 		XLL_ERROR(__FUNCTION__ ": unknown exception");
 	}
-
 	return result;
 }
 AddIn xai_option_cgf(
@@ -51,9 +63,7 @@ double WINAPI xll_option_cgf(double s, HANDLEX m)
 #pragma XLLEXPORT
 	double result = NaN<double>;
 	try {
-		handle<base<>> m_(m);
-		ensure(m_);
-		result = m_->cgf(s);
+		result = model(m)->cgf(s);
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
@@ -78,10 +88,7 @@ double WINAPI xll_black_moneyness(double f, double s, double k, HANDLEX m)
 	double result = NaN<double>;
 
 	try {
-		handle<base<>> m_(m);
-		ensure(m_);
-
-		result = black::moneyness(f, s, k, *m_);
+		result = black::moneyness(f, s, k, *model(m));
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
@@ -110,10 +117,36 @@ double WINAPI xll_option_black_put(double f, double s, double k, HANDLEX m)
 	double result = NaN<double>;
 
 	try {
-		handle<base<>> m_(m);
-		ensure(m_);
+		result = black::put(f, s, k, *model(m));
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	catch (...) {
+		XLL_ERROR(__FUNCTION__ ": unknown exception");
+	}
 
-		result = black::put(f, s, k, *m_);
+	return result;
+}
+
+AddIn xai_option_black_put_delta(
+	Function(XLL_DOUBLE, L"xll_option_black_put_delta", CATEGORY L".BLACK.PUT_DELTA")
+	.Arguments({
+		Arg(XLL_DOUBLE, L"f", L"is the forward price."),
+		Arg(XLL_DOUBLE, L"s", L"is the volatility."),
+		Arg(XLL_DOUBLE, L"k", L"is the strike price."),
+		Arg(XLL_HANDLEX, L"m", L"is the handle to a model."),
+		})
+		.Category(CATEGORY)
+	.FunctionHelp(L"Return price of a European put option under the model.")
+);
+double WINAPI xll_option_black_put_delta(double f, double s, double k, HANDLEX m)
+{
+#pragma	XLLEXPORT
+	double result = NaN<double>;
+
+	try {
+		result = black::put_delta(f, s, k, *model(m));
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
@@ -142,10 +175,7 @@ double WINAPI xll_option_black_call(double f, double s, double k, HANDLEX m)
 	double result = NaN<double>;
 
 	try {
-		handle<base<>> m_(m);
-		ensure(m_);
-
-		result = black::call(f, s, k, *m_);
+		result = black::call(f, s, k, *model(m));
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
@@ -176,15 +206,11 @@ double WINAPI xll_option_bsm_put(double S, double sigma, double k, double r, dou
 	double result = NaN<double>;
 
 	try {
-		handle<base<>> m_(m);
-		ensure(m_);
-
 		// BSM to Black Model transformation
-		double f = S * exp(r * t);      // Forward price
-		double stdev = sigma * sqrt(t); // Integrated volatility (Standard Deviation)
+		auto [f, s] = black::bsm::bsm_to_black(r, S, sigma, t);
 
 		// Calculate Black put price and discount to present value
-		result = exp(-r * t) * black::put(f, stdev, k, *m_);
+		result = exp(-r * t) * black::put(f, s, k, *model(m));
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());

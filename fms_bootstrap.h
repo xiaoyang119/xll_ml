@@ -3,6 +3,7 @@
 #ifdef _DEBUG
 #include <cassert>
 #endif
+#include <stdexcept>
 #include <utility>
 #include "fms_instrument.h"
 #include "fms_curve_pwflat.h"
@@ -13,12 +14,11 @@ namespace fms::curve {
 
 	// bootstrap1 - cash deposit
 	// bootstrap2 - forward rate agreement
-
-	// TODO: Adjust this to take instrument::base<U,C>
+	
 	// Bootstrap a single instrument given last time on curve and optional initial forward rate guess.
 	// Return point on the curve repricing the instrument.
 	template<class U, class C, class T = double, class F = double>
-	inline std::pair<T, F> bootstrap0(const instrument::base<U, C>& i, const curve::base<T, F>& f,
+	inline std::pair<T, F> bootstrap0(const instrument::instrument<U, C>& i, const curve::base<T, F>& f,
 		T _t, F _f = math::NaN<F>, F p = 0)
 	{
 		const auto uc = i.last(); // last instrument cash flow
@@ -34,37 +34,44 @@ namespace fms::curve {
 			_f = 0.01;
 		}
 
-		const auto vp = [&i, &f, _t, p](F f_) { return value::present(i, extrapolate(f, _t, f_)) - p; };
+		const auto vp = [&i, &f, _t, p](F f_) { 
+			return value::present(i, extrapolate(f, _t, f_)) - p; 
+		};
 
 		auto [f_, tol, n] = root1d::secant(_f, _f + 0.01).solve(vp);
-		_f = f_;
 
-		return { uc.first, _f };
+		return { uc.first, f_ };
 	}
 
 	// Bootstrap a piecewise flat curve from instruments and prices.
-	template<class I, class U = double, class C = double, class P = double>
-	constexpr curve::pwflat<U, P> bootstrap(std::span<const I> is, std::span<const P> ps,
+	template<class U = double, class C = double, class P = double>
+	inline curve::pwflat<U, P> bootstrap(std::span<instrument::instrument<U,C>*> is, std::span<P> ps,
 		double _t = 0, double _f = 0.03)
 		//requires std::convertible_to<I,const instrument::base<U,C>&>
 	{
-		curve::pwflat<U, P> f;
-
-		/*
-		// TODO: Use a for loop like in the present value function.
-		// Assume is[i] is a const reference to an instrument<U,C>
-		while (is and ps) {
-			std::tie(_t, _f) = bootstrap0(*is, f, _t, _f, *ps);
-			f.push_back(_t, _f);
-			// f.push_back(bootstrap0(...));
-			++is;
-			++ps;
+		// Validate inputs
+		if (is.size() != ps.size()) {
+			throw std::invalid_argument("bootstrap: instruments and prices must have the same size");
 		}
-		*/
 
-		for (size_t i = 0; i < is.size() && i < ps.size(); ++i) {
-			std::tie(_t, _f) = bootstrap0(is[i], f, _t, _f, ps[i]);
-			f.push_back(_t, _f);
+		curve::pwflat<U, P> f;
+		for (std::size_t i = 0; i < is.size(); ++i) {
+			// Validate pointer is not null
+			if (is[i] == nullptr) {
+				throw std::invalid_argument("bootstrap: instrument pointer is null");
+			}
+
+			// FIX: Use different variable name to avoid shadowing parameter _f
+			const auto [t_next, f_next] = bootstrap0(*(is[i]), f, _t, _f, ps[i]);
+
+			// Check for failed bootstrap
+			if (std::isnan(t_next) || std::isnan(f_next)) {
+				throw std::runtime_error("bootstrap: failed to bootstrap instrument");
+			}
+
+			f.push_back(t_next, f_next);
+			_t = t_next;
+			_f = f_next;  // Update forward rate guess for next iteration
 		}
 
 		return f;
@@ -72,36 +79,19 @@ namespace fms::curve {
 #ifdef _DEBUG
 	inline int bootstrap_test()
 	{
-		// TODO: Delete code that is not working.
-		/*
-		using namespace fms::iterable;
 		{
-			curve::constant<> f;
-			double r = 0.1;
-			auto zcb = instrument::zero_coupon_bond(1, std::exp(r));
-			auto D = f.discount(1, 0., r);
+			constexpr curve::constant<> f;
+			constexpr double r = 0.1;
+			const auto zcb = instrument::zero_coupon_bond(1, math::exp_approx(r));
+			const auto D = f.discount(1, 0., r);
 			assert(D < 1);
 			auto p = value::present(zcb, extrapolate(f, 0., r));
-			assert(p == 1);
+			assert(math::abs(p - 1) < math::sqrt_epsilon<>);
 			auto d = value::duration(zcb, extrapolate(f, 0., r));
-			assert(d == -1);
-			auto [_t, _f] = curve::bootstrap0(zcb, f, 0., 0.2, 1.);
-			assert(_t == 0);
-			assert(std::fabs(_f - r) <= math::sqrt_epsilon<double>);
-		}
-		*/
-
-		{
-			curve::constant<> f;
-			double r = 0.1;
-			auto zcb = instrument::zero_coupon_bond(1, std::exp(r));
-			auto D = f.discount(1, 0., r);
-			assert(D < 1);
-			auto p = value::present(zcb, extrapolate(f, 0., r));
-			assert(p == 1);
+			assert(math::abs(d - -1) < math::sqrt_epsilon<>);
 			auto [_t, _f] = curve::bootstrap0(zcb, f, 0., 0.2, 1.);
 			assert(_t == 1);
-			assert(std::fabs(_f - r) <= math::sqrt_epsilon<double>);
+			assert(math::abs(_f - r) <= math::sqrt_epsilon<double>);
 		}
 
 		return 0;
